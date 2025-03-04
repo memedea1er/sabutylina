@@ -3,6 +3,8 @@ from tkinter import filedialog, messagebox
 import heapq
 import os
 from collections import defaultdict, Counter
+import matplotlib.pyplot as plt
+import networkx as nx
 
 class HuffmanNode:
     def __init__(self, char, freq):
@@ -50,6 +52,52 @@ def build_huffman_tree(freq_map):
     return priority_queue[0]
 
 
+def plot_huffman_tree(root):
+    """
+    Визуализация дерева Хаффмана с использованием matplotlib и networkx.
+    :param root: Корень дерева Хаффмана
+    """
+    G = nx.DiGraph()  # Создаем направленный граф
+    pos = {}  # Словарь для хранения позиций узлов
+    labels = {}  # Словарь для хранения меток узлов
+
+    def add_edges(node, x, y, dx):
+        """
+        Рекурсивная функция для добавления узлов и ребер в граф.
+        :param node: Текущий узел
+        :param x: x-координата текущего узла
+        :param y: y-координата текущего узла
+        :param dx: Шаг по оси x для дочерних узлов
+        """
+        if node:
+            # Если это лист дерева и символ печатаемый, отображаем символ и частоту
+            if node.char is not None:
+                char = node.char
+                # Проверяем, является ли символ печатаемым
+                if char >= 32 and char <= 126:  # ASCII-коды печатаемых символов
+                    labels[node] = f"'{chr(char)}':{node.freq}"
+                else:
+                    # Для непечатаемых символов используем их шестнадцатеричное представление
+                    labels[node] = f"0x{char:02X}:{node.freq}"
+            else:
+                # Для внутренних узлов отображаем только частоту
+                labels[node] = f"{node.freq}"
+
+            pos[node] = (x, y)
+            if node.left:
+                G.add_edge(node, node.left)
+                add_edges(node.left, x - dx, y - 1, dx / 2)
+            if node.right:
+                G.add_edge(node, node.right)
+                add_edges(node.right, x + dx, y - 1, dx / 2)
+
+    add_edges(root, 0, 0, 1)  # Начинаем с корня дерева
+
+    # Отрисовка графа
+    plt.figure(figsize=(10, 6))
+    nx.draw(G, pos, with_labels=True, labels=labels, node_size=2000, node_color="lightblue", font_size=10, font_weight="bold")
+    plt.title("Huffman Tree Visualization")
+
 def build_codebook(root, code="", codebook=None):
     """
     Генерирует кодовую таблицу (mapping символов в их двоичные коды).
@@ -83,6 +131,7 @@ def encode_file(input_file, output_file):
 
     freq_map = Counter(data)  # Подсчитываем частоты символов
     root = build_huffman_tree(freq_map)  # Строим дерево Хаффмана
+    plot_huffman_tree(root)  # Визуализация дерева Хаффмана
     codebook = build_codebook(root)  # Создаём таблицу кодирования
 
     encoded_data = ''.join(codebook[byte] for byte in data)  # Кодируем данные
@@ -181,6 +230,7 @@ class HuffmanApp:
         try:
             encode_file(input_file, output_file)
             messagebox.showinfo("Success", "File compressed successfully.")
+            plt.show()
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
